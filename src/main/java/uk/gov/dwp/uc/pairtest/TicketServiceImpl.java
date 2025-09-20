@@ -29,8 +29,8 @@ public class TicketServiceImpl implements TicketService {
         int totalCost = calculateTotalCost(ticketTypeRequests);
         int totalSeats = calculateTotalSeats(ticketTypeRequests);
         
-        paymentService.makePayment(accountId, totalCost);
         seatService.reserveSeat(accountId, totalSeats);
+        paymentService.makePayment(accountId, totalCost);
     }
 
     // Making sure account ID is valid
