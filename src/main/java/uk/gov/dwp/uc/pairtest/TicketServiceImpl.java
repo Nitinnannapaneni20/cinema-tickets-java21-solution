@@ -9,6 +9,7 @@ public class TicketServiceImpl implements TicketService {
     public void purchaseTickets(Long accountId, TicketTypeRequest... ticketTypeRequests) throws InvalidPurchaseException {
         checkAccountId(accountId);
         checkTicketRequests(ticketTypeRequests);
+        checkBusinessRules(ticketTypeRequests);
     }
 
     // Making sure account ID is valid
@@ -24,10 +25,48 @@ public class TicketServiceImpl implements TicketService {
             throw new InvalidPurchaseException();
         }
         
+        int totalTickets = 0;
         for (TicketTypeRequest request : requests) {
             if (request.getNoOfTickets() <= 0) {
                 throw new InvalidPurchaseException();
             }
+            totalTickets += request.getNoOfTickets();
+        }
+        
+        // Max 25 tickets rule
+        if (totalTickets > 25) {
+            throw new InvalidPurchaseException();
+        }
+    }
+    
+    // Validating business rules
+    private void checkBusinessRules(TicketTypeRequest... requests) {
+        int adults = 0;
+        int children = 0;
+        int infants = 0;
+        
+        // Count each ticket type
+        for (TicketTypeRequest request : requests) {
+            switch (request.getTicketType()) {
+                case ADULT:
+                    adults += request.getNoOfTickets();
+                    break;
+                case CHILD:
+                    children += request.getNoOfTickets();
+                    break;
+                case INFANT:
+                    infants += request.getNoOfTickets();
+                    break;
+            }
+        }
+        
+        if (adults == 0 && (children > 0 || infants > 0)) {
+            throw new InvalidPurchaseException();
+        }
+        
+        // Infants sit on adult laps so can't have more infants than adults
+        if (infants > adults) {
+            throw new InvalidPurchaseException();
         }
     }
 
