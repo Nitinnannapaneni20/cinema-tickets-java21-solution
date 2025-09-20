@@ -1,6 +1,7 @@
 package uk.gov.dwp.uc.pairtest;
 
 import thirdparty.paymentgateway.TicketPaymentService;
+import thirdparty.seatbooking.SeatReservationService;
 import uk.gov.dwp.uc.pairtest.domain.TicketTypeRequest;
 import uk.gov.dwp.uc.pairtest.exception.InvalidPurchaseException;
 
@@ -11,9 +12,11 @@ public class TicketServiceImpl implements TicketService {
     private static final int INFANT_PRICE = 0;
     
     private final TicketPaymentService paymentService;
+    private final SeatReservationService seatService;
     
-    public TicketServiceImpl(TicketPaymentService paymentService) {
+    public TicketServiceImpl(TicketPaymentService paymentService, SeatReservationService seatService) {
         this.paymentService = paymentService;
+        this.seatService = seatService;
     }
 
     @Override
@@ -22,9 +25,12 @@ public class TicketServiceImpl implements TicketService {
         checkTicketRequests(ticketTypeRequests);
         checkBusinessRules(ticketTypeRequests);
         
-        // Calculate total cost for the tickets and make payment
+        // Calculate total cost and seats, then make payment and reserve seats
         int totalCost = calculateTotalCost(ticketTypeRequests);
+        int totalSeats = calculateTotalSeats(ticketTypeRequests);
+        
         paymentService.makePayment(accountId, totalCost);
+        seatService.reserveSeat(accountId, totalSeats);
     }
 
     // Making sure account ID is valid
@@ -104,6 +110,25 @@ public class TicketServiceImpl implements TicketService {
         }
         
         return totalCost;
+    }
+    
+    // Calculate how many seats to reserve (adults + children, infants sit on adults lap)
+    private int calculateTotalSeats(TicketTypeRequest... requests) {
+        int totalSeats = 0;
+        
+        for (TicketTypeRequest request : requests) {
+            switch (request.getTicketType()) {
+                case ADULT:
+                case CHILD:
+                    totalSeats += request.getNoOfTickets();
+                    break;
+                case INFANT:
+                    // Infants don't need seats
+                    break;
+            }
+        }
+        
+        return totalSeats;
     }
 
 }
