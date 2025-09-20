@@ -1,15 +1,30 @@
 package uk.gov.dwp.uc.pairtest;
 
+import thirdparty.paymentgateway.TicketPaymentService;
 import uk.gov.dwp.uc.pairtest.domain.TicketTypeRequest;
 import uk.gov.dwp.uc.pairtest.exception.InvalidPurchaseException;
 
 public class TicketServiceImpl implements TicketService {
+    
+    private static final int ADULT_PRICE = 25;
+    private static final int CHILD_PRICE = 15;
+    private static final int INFANT_PRICE = 0;
+    
+    private final TicketPaymentService paymentService;
+    
+    public TicketServiceImpl(TicketPaymentService paymentService) {
+        this.paymentService = paymentService;
+    }
 
     @Override
     public void purchaseTickets(Long accountId, TicketTypeRequest... ticketTypeRequests) throws InvalidPurchaseException {
         checkAccountId(accountId);
         checkTicketRequests(ticketTypeRequests);
         checkBusinessRules(ticketTypeRequests);
+        
+        // Calculate total cost for the tickets and make payment
+        int totalCost = calculateTotalCost(ticketTypeRequests);
+        paymentService.makePayment(accountId, totalCost);
     }
 
     // Making sure account ID is valid
@@ -27,7 +42,7 @@ public class TicketServiceImpl implements TicketService {
         
         int totalTickets = 0;
         for (TicketTypeRequest request : requests) {
-            if (request.getNoOfTickets() <= 0) {
+            if (request == null || request.getNoOfTickets() <= 0) {
                 throw new InvalidPurchaseException();
             }
             totalTickets += request.getNoOfTickets();
@@ -68,6 +83,27 @@ public class TicketServiceImpl implements TicketService {
         if (infants > adults) {
             throw new InvalidPurchaseException();
         }
+    }
+    
+    // Calculate how much money to charge the customer for movie tickets
+    private int calculateTotalCost(TicketTypeRequest... requests) {
+        int totalCost = 0;
+        
+        for (TicketTypeRequest request : requests) {
+            switch (request.getTicketType()) {
+                case ADULT:
+                    totalCost += request.getNoOfTickets() * ADULT_PRICE;
+                    break;
+                case CHILD:
+                    totalCost += request.getNoOfTickets() * CHILD_PRICE;
+                    break;
+                case INFANT:
+                    totalCost += request.getNoOfTickets() * INFANT_PRICE;
+                    break;
+            }
+        }
+        
+        return totalCost;
     }
 
 }
