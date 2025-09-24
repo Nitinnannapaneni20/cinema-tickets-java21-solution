@@ -2,9 +2,12 @@ package uk.gov.dwp.uc.pairtest.validation;
 
 import uk.gov.dwp.uc.pairtest.domain.TicketTypeRequest;
 import uk.gov.dwp.uc.pairtest.exception.InvalidPurchaseException;
+import uk.gov.dwp.uc.pairtest.exception.DetailedInvalidPurchaseException;
 import java.util.Arrays;
 
 public class TicketValidatorImpl implements TicketValidator {
+    
+    private static final int MAX_TICKETS = 25;
     
     @Override
     public void validate(Long accountId, TicketTypeRequest... requests) {
@@ -14,14 +17,24 @@ public class TicketValidatorImpl implements TicketValidator {
     }
     
     private void validateAccountId(Long accountId) {
-        if (accountId == null || accountId <= 0) {
-            throw new InvalidPurchaseException();
+        if (accountId == null) {
+            throw new DetailedInvalidPurchaseException("Account ID cannot be null");
+        }
+        if (accountId <= 0) {
+            throw new DetailedInvalidPurchaseException("Account ID must be greater than 0");
         }
     }
     
     private void validateTicketRequests(TicketTypeRequest... requests) {
         if (requests == null || requests.length == 0) {
-            throw new InvalidPurchaseException();
+            throw new DetailedInvalidPurchaseException("At least one ticket request is required");
+        }
+        
+        boolean hasValidRequest = Arrays.stream(requests)
+            .anyMatch(request -> request != null && request.getNoOfTickets() > 0);
+            
+        if (!hasValidRequest) {
+            throw new DetailedInvalidPurchaseException("All ticket requests are invalid or have zero quantity");
         }
         
         int totalTickets = Arrays.stream(requests)
@@ -29,8 +42,9 @@ public class TicketValidatorImpl implements TicketValidator {
             .mapToInt(TicketTypeRequest::getNoOfTickets)
             .sum();
             
-        if (totalTickets == 0 || totalTickets > 25) {
-            throw new InvalidPurchaseException();
+        if (totalTickets > MAX_TICKETS) {
+            throw new DetailedInvalidPurchaseException(
+                String.format("Cannot purchase more than %d tickets at once. Requested: %d", MAX_TICKETS, totalTickets));
         }
     }
     
@@ -40,17 +54,19 @@ public class TicketValidatorImpl implements TicketValidator {
         int infants = countTicketsByType(requests, TicketTypeRequest.Type.INFANT);
         
         if (adults == 0 && (children > 0 || infants > 0)) {
-            throw new InvalidPurchaseException();
+            throw new DetailedInvalidPurchaseException(
+                "Children and infants must be accompanied by at least one adult");
         }
         
         if (infants > adults) {
-            throw new InvalidPurchaseException();
+            throw new DetailedInvalidPurchaseException(
+                String.format("Cannot have more infants (%d) than adults (%d) - infants sit on adult laps", infants, adults));
         }
     }
     
     private int countTicketsByType(TicketTypeRequest[] requests, TicketTypeRequest.Type type) {
         return Arrays.stream(requests)
-            .filter(request -> request.getTicketType() == type)
+            .filter(request -> request != null && request.getTicketType() == type)
             .mapToInt(TicketTypeRequest::getNoOfTickets)
             .sum();
     }
