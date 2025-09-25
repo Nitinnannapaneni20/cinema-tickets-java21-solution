@@ -2,7 +2,7 @@ package uk.gov.dwp.uc.pairtest.validation;
 
 import uk.gov.dwp.uc.pairtest.domain.TicketTypeRequest;
 import uk.gov.dwp.uc.pairtest.exception.InvalidPurchaseException;
-import uk.gov.dwp.uc.pairtest.exception.DetailedInvalidPurchaseException;
+import uk.gov.dwp.uc.pairtest.exception.TicketPurchaseException;
 import java.util.Arrays;
 
 public class TicketValidatorImpl implements TicketValidator {
@@ -11,30 +11,23 @@ public class TicketValidatorImpl implements TicketValidator {
     
     @Override
     public void validate(Long accountId, TicketTypeRequest... requests) {
-        validateAccountId(accountId);
-        validateTicketRequests(requests);
-        validateBusinessRules(requests);
+        ensureAccountIdIsValid(accountId);
+        ensureRequestsNotExceedingMaximumTickets(requests);
+        enforceAdultSupervisionBusinessRules(requests);
     }
     
-    private void validateAccountId(Long accountId) {
+    private void ensureAccountIdIsValid(Long accountId) {
         if (accountId == null) {
-            throw new DetailedInvalidPurchaseException("Account ID cannot be null");
+            throw new TicketPurchaseException("Account ID cannot be null");
         }
         if (accountId <= 0) {
-            throw new DetailedInvalidPurchaseException("Account ID must be greater than 0");
+            throw new TicketPurchaseException("Account ID must be greater than 0");
         }
     }
     
-    private void validateTicketRequests(TicketTypeRequest... requests) {
+    private void ensureRequestsNotExceedingMaximumTickets(TicketTypeRequest... requests) {
         if (requests == null || requests.length == 0) {
-            throw new DetailedInvalidPurchaseException("At least one ticket request is required");
-        }
-        
-        boolean hasValidRequest = Arrays.stream(requests)
-            .anyMatch(request -> request != null && request.getNoOfTickets() > 0);
-            
-        if (!hasValidRequest) {
-            throw new DetailedInvalidPurchaseException("All ticket requests are invalid or have zero quantity");
+            throw new TicketPurchaseException("At least one ticket request is required");
         }
         
         int totalTickets = Arrays.stream(requests)
@@ -42,29 +35,33 @@ public class TicketValidatorImpl implements TicketValidator {
             .mapToInt(TicketTypeRequest::getNoOfTickets)
             .sum();
             
+        if (totalTickets <= 0) {
+            throw new TicketPurchaseException("All ticket requests are invalid or have zero quantity");
+        }
+            
         if (totalTickets > MAX_TICKETS) {
-            throw new DetailedInvalidPurchaseException(
+            throw new TicketPurchaseException(
                 String.format("Cannot purchase more than %d tickets at once. Requested: %d", MAX_TICKETS, totalTickets));
         }
     }
     
-    private void validateBusinessRules(TicketTypeRequest... requests) {
-        int adults = countTicketsByType(requests, TicketTypeRequest.Type.ADULT);
-        int children = countTicketsByType(requests, TicketTypeRequest.Type.CHILD);
-        int infants = countTicketsByType(requests, TicketTypeRequest.Type.INFANT);
+    private void enforceAdultSupervisionBusinessRules(TicketTypeRequest... requests) {
+        int adults = calculateTotalTicketsByType(requests, TicketTypeRequest.Type.ADULT);
+        int children = calculateTotalTicketsByType(requests, TicketTypeRequest.Type.CHILD);
+        int infants = calculateTotalTicketsByType(requests, TicketTypeRequest.Type.INFANT);
         
         if (adults == 0 && (children > 0 || infants > 0)) {
-            throw new DetailedInvalidPurchaseException(
+            throw new TicketPurchaseException(
                 "Children and infants must be accompanied by at least one adult");
         }
         
         if (infants > adults) {
-            throw new DetailedInvalidPurchaseException(
+            throw new TicketPurchaseException(
                 String.format("Cannot have more infants (%d) than adults (%d) - infants sit on adult laps", infants, adults));
         }
     }
     
-    private int countTicketsByType(TicketTypeRequest[] requests, TicketTypeRequest.Type type) {
+    private int calculateTotalTicketsByType(TicketTypeRequest[] requests, TicketTypeRequest.Type type) {
         return Arrays.stream(requests)
             .filter(request -> request != null && request.getTicketType() == type)
             .mapToInt(TicketTypeRequest::getNoOfTickets)

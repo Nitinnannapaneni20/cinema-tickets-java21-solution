@@ -1,10 +1,10 @@
 package uk.gov.dwp.uc.pairtest.exception;
 
-public class DetailedInvalidPurchaseException extends InvalidPurchaseException {
+public class TicketPurchaseException extends InvalidPurchaseException {
     
     private final String detailMessage;
     
-    public DetailedInvalidPurchaseException(String message) {
+    public TicketPurchaseException(String message) {
         super();
         this.detailMessage = message;
     }
