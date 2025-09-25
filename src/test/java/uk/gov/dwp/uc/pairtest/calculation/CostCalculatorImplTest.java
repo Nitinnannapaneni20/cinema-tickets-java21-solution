@@ -4,6 +4,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import uk.gov.dwp.uc.pairtest.domain.TicketTypeRequest;
 
+import java.util.Map;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class CostCalculatorImplTest {
@@ -17,47 +19,49 @@ class CostCalculatorImplTest {
 
     @Test
     void testAdultTicketsAre25Each() {
-        TicketTypeRequest request = new TicketTypeRequest(TicketTypeRequest.Type.ADULT, 2);
+        Map<TicketTypeRequest.Type, Integer> ticketCounts = Map.of(TicketTypeRequest.Type.ADULT, 2);
         
-        int cost = costCalculator.calculate(request);
+        int cost = costCalculator.calculate(ticketCounts);
         
         assertEquals(50, cost); // 2 * £25
     }
 
     @Test
     void testChildTicketsAre15Each() {
-        TicketTypeRequest request = new TicketTypeRequest(TicketTypeRequest.Type.CHILD, 3);
+        Map<TicketTypeRequest.Type, Integer> ticketCounts = Map.of(TicketTypeRequest.Type.CHILD, 3);
         
-        int cost = costCalculator.calculate(request);
+        int cost = costCalculator.calculate(ticketCounts);
         
         assertEquals(45, cost); // 3 * £15
     }
 
     @Test
     void testInfantsAreFree() {
-        TicketTypeRequest request = new TicketTypeRequest(TicketTypeRequest.Type.INFANT, 2);
+        Map<TicketTypeRequest.Type, Integer> ticketCounts = Map.of(TicketTypeRequest.Type.INFANT, 2);
         
-        int cost = costCalculator.calculate(request);
+        int cost = costCalculator.calculate(ticketCounts);
         
         assertEquals(0, cost); // 2 * £0
     }
 
     @Test
     void testFamilyTicketPricing() {
-        TicketTypeRequest adults = new TicketTypeRequest(TicketTypeRequest.Type.ADULT, 2);
-        TicketTypeRequest children = new TicketTypeRequest(TicketTypeRequest.Type.CHILD, 1);
-        TicketTypeRequest infants = new TicketTypeRequest(TicketTypeRequest.Type.INFANT, 1);
+        Map<TicketTypeRequest.Type, Integer> ticketCounts = Map.of(
+            TicketTypeRequest.Type.ADULT, 2,
+            TicketTypeRequest.Type.CHILD, 1,
+            TicketTypeRequest.Type.INFANT, 1
+        );
         
-        int cost = costCalculator.calculate(adults, children, infants);
+        int cost = costCalculator.calculate(ticketCounts);
         
         assertEquals(65, cost); // 2*£25 + 1*£15 + 1*£0
     }
 
     @Test
     void testZeroTicketsCostNothing() {
-        TicketTypeRequest request = new TicketTypeRequest(TicketTypeRequest.Type.ADULT, 0);
+        Map<TicketTypeRequest.Type, Integer> ticketCounts = Map.of();
         
-        int cost = costCalculator.calculate(request);
+        int cost = costCalculator.calculate(ticketCounts);
         
         assertEquals(0, cost);
     }

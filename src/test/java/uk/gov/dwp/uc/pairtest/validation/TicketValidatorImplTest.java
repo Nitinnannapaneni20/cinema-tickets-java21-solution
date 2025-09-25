@@ -2,8 +2,14 @@ package uk.gov.dwp.uc.pairtest.validation;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import uk.gov.dwp.uc.pairtest.domain.TicketTypeRequest;
 import uk.gov.dwp.uc.pairtest.exception.InvalidPurchaseException;
+
+import java.util.Map;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -16,85 +22,99 @@ class TicketValidatorImplTest {
         validator = new TicketValidatorImpl();
     }
 
-    @Test
-    void testValidRequestPasses() {
-        TicketTypeRequest request = new TicketTypeRequest(TicketTypeRequest.Type.ADULT, 2);
-        
-        assertDoesNotThrow(() -> validator.validate(1L, request));
+    // Can parameterized tests be used here to pass multiple valid requests?
+    @ParameterizedTest
+    @MethodSource("validTicketRequests")
+    void testValidRequestPasses(Map<TicketTypeRequest.Type, Integer> ticketCounts) {
+        assertDoesNotThrow(() -> validator.validate(1L, ticketCounts));
+    }
+    
+    static Stream<Arguments> validTicketRequests() {
+        return Stream.of(
+            Arguments.of(Map.of(TicketTypeRequest.Type.ADULT, 2)),
+            Arguments.of(Map.of(TicketTypeRequest.Type.ADULT, 1, TicketTypeRequest.Type.CHILD, 1)),
+            Arguments.of(Map.of(TicketTypeRequest.Type.ADULT, 2, TicketTypeRequest.Type.INFANT, 1)),
+            Arguments.of(Map.of(TicketTypeRequest.Type.ADULT, 25)),
+            Arguments.of(Map.of(TicketTypeRequest.Type.ADULT, 3, TicketTypeRequest.Type.CHILD, 2, TicketTypeRequest.Type.INFANT, 1))
+        );
     }
 
     @Test
     void testNullAccountIdFails() {
-        TicketTypeRequest request = new TicketTypeRequest(TicketTypeRequest.Type.ADULT, 1);
+        Map<TicketTypeRequest.Type, Integer> ticketCounts = Map.of(TicketTypeRequest.Type.ADULT, 1);
         
-        assertThrows(InvalidPurchaseException.class, () -> validator.validate(null, request));
+        assertThrows(InvalidPurchaseException.class, () -> validator.validate(null, ticketCounts));
     }
 
     @Test
     void testZeroAccountIdFails() {
-        TicketTypeRequest request = new TicketTypeRequest(TicketTypeRequest.Type.ADULT, 1);
+        Map<TicketTypeRequest.Type, Integer> ticketCounts = Map.of(TicketTypeRequest.Type.ADULT, 1);
         
-        assertThrows(InvalidPurchaseException.class, () -> validator.validate(0L, request));
+        assertThrows(InvalidPurchaseException.class, () -> validator.validate(0L, ticketCounts));
     }
 
     @Test
     void testNegativeAccountIdFails() {
-        TicketTypeRequest request = new TicketTypeRequest(TicketTypeRequest.Type.ADULT, 1);
+        Map<TicketTypeRequest.Type, Integer> ticketCounts = Map.of(TicketTypeRequest.Type.ADULT, 1);
         
-        assertThrows(InvalidPurchaseException.class, () -> validator.validate(-1L, request));
+        assertThrows(InvalidPurchaseException.class, () -> validator.validate(-1L, ticketCounts));
     }
 
     @Test
     void testNullTicketRequestsFails() {
-        assertThrows(InvalidPurchaseException.class, () -> validator.validate(1L, (TicketTypeRequest[]) null));
+        assertThrows(InvalidPurchaseException.class, () -> validator.validate(1L, null));
     }
 
     @Test
     void testEmptyTicketRequestsFails() {
-        assertThrows(InvalidPurchaseException.class, () -> validator.validate(1L));
+        assertThrows(InvalidPurchaseException.class, () -> validator.validate(1L, Map.of()));
     }
 
     @Test
     void testOver25TicketsFails() {
-        TicketTypeRequest request = new TicketTypeRequest(TicketTypeRequest.Type.ADULT, 26);
+        Map<TicketTypeRequest.Type, Integer> ticketCounts = Map.of(TicketTypeRequest.Type.ADULT, 26);
         
-        assertThrows(InvalidPurchaseException.class, () -> validator.validate(1L, request));
+        assertThrows(InvalidPurchaseException.class, () -> validator.validate(1L, ticketCounts));
     }
 
     @Test
     void testExactly25TicketsPasses() {
-        TicketTypeRequest request = new TicketTypeRequest(TicketTypeRequest.Type.ADULT, 25);
+        Map<TicketTypeRequest.Type, Integer> ticketCounts = Map.of(TicketTypeRequest.Type.ADULT, 25);
         
-        assertDoesNotThrow(() -> validator.validate(1L, request));
+        assertDoesNotThrow(() -> validator.validate(1L, ticketCounts));
     }
 
     @Test
     void testChildAloneFails() {
-        TicketTypeRequest request = new TicketTypeRequest(TicketTypeRequest.Type.CHILD, 1);
+        Map<TicketTypeRequest.Type, Integer> ticketCounts = Map.of(TicketTypeRequest.Type.CHILD, 1);
         
-        assertThrows(InvalidPurchaseException.class, () -> validator.validate(1L, request));
+        assertThrows(InvalidPurchaseException.class, () -> validator.validate(1L, ticketCounts));
     }
 
     @Test
     void testInfantAloneFails() {
-        TicketTypeRequest request = new TicketTypeRequest(TicketTypeRequest.Type.INFANT, 1);
+        Map<TicketTypeRequest.Type, Integer> ticketCounts = Map.of(TicketTypeRequest.Type.INFANT, 1);
         
-        assertThrows(InvalidPurchaseException.class, () -> validator.validate(1L, request));
+        assertThrows(InvalidPurchaseException.class, () -> validator.validate(1L, ticketCounts));
     }
 
     @Test
     void testMoreInfantsThanAdultsFails() {
-        TicketTypeRequest adults = new TicketTypeRequest(TicketTypeRequest.Type.ADULT, 1);
-        TicketTypeRequest infants = new TicketTypeRequest(TicketTypeRequest.Type.INFANT, 2);
+        Map<TicketTypeRequest.Type, Integer> ticketCounts = Map.of(
+            TicketTypeRequest.Type.ADULT, 1,
+            TicketTypeRequest.Type.INFANT, 2
+        );
         
-        assertThrows(InvalidPurchaseException.class, () -> validator.validate(1L, adults, infants));
+        assertThrows(InvalidPurchaseException.class, () -> validator.validate(1L, ticketCounts));
     }
 
     @Test
     void testOneInfantPerAdultPasses() {
-        TicketTypeRequest adults = new TicketTypeRequest(TicketTypeRequest.Type.ADULT, 2);
-        TicketTypeRequest infants = new TicketTypeRequest(TicketTypeRequest.Type.INFANT, 2);
+        Map<TicketTypeRequest.Type, Integer> ticketCounts = Map.of(
+            TicketTypeRequest.Type.ADULT, 2,
+            TicketTypeRequest.Type.INFANT, 2
+        );
         
-        assertDoesNotThrow(() -> validator.validate(1L, adults, infants));
+        assertDoesNotThrow(() -> validator.validate(1L, ticketCounts));
     }
 }

@@ -1,7 +1,6 @@
 package uk.gov.dwp.uc.pairtest.calculation;
 
 import uk.gov.dwp.uc.pairtest.domain.TicketTypeRequest;
-import java.util.Arrays;
 import java.util.Map;
 
 public class CostCalculatorImpl implements CostCalculator {
@@ -13,9 +12,9 @@ public class CostCalculatorImpl implements CostCalculator {
     );
     
     @Override
-    public int calculate(TicketTypeRequest... requests) {
-        return Arrays.stream(requests)
-            .mapToInt(request -> request.getNoOfTickets() * PRICES.get(request.getTicketType()))
+    public int calculate(Map<TicketTypeRequest.Type, Integer> ticketCounts) {
+        return ticketCounts.entrySet().stream()
+            .mapToInt(entry -> entry.getValue() * PRICES.get(entry.getKey()))
             .sum();
     }
 }

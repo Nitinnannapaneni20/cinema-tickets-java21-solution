@@ -1,7 +1,7 @@
 package uk.gov.dwp.uc.pairtest.calculation;
 
 import uk.gov.dwp.uc.pairtest.domain.TicketTypeRequest;
-import java.util.Arrays;
+import java.util.Map;
 import java.util.Set;
 
 public class SeatCalculatorImpl implements SeatCalculator {
@@ -12,10 +12,10 @@ public class SeatCalculatorImpl implements SeatCalculator {
     );
     
     @Override
-    public int calculate(TicketTypeRequest... requests) {
-        return Arrays.stream(requests)
-            .filter(request -> SEAT_REQUIRED_TYPES.contains(request.getTicketType()))
-            .mapToInt(TicketTypeRequest::getNoOfTickets)
+    public int calculate(Map<TicketTypeRequest.Type, Integer> ticketCounts) {
+        return ticketCounts.entrySet().stream()
+            .filter(entry -> SEAT_REQUIRED_TYPES.contains(entry.getKey()))
+            .mapToInt(Map.Entry::getValue)
             .sum();
     }
 }

@@ -12,6 +12,9 @@ import uk.gov.dwp.uc.pairtest.calculation.SeatCalculator;
 import uk.gov.dwp.uc.pairtest.calculation.SeatCalculatorImpl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import java.util.Arrays;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 public class TicketServiceImpl implements TicketService {
     
@@ -35,10 +38,18 @@ public class TicketServiceImpl implements TicketService {
     public void purchaseTickets(Long accountId, TicketTypeRequest... ticketTypeRequests) throws InvalidPurchaseException {
         logger.info("Processing ticket purchase for account: {}", accountId);
         
-        validator.validate(accountId, ticketTypeRequests);
+        // Traverse ticket requests once and store counts in map to avoid multiple iterations
+        Map<TicketTypeRequest.Type, Integer> ticketCounts = Arrays.stream(ticketTypeRequests)
+            .filter(request -> request != null && request.getNoOfTickets() > 0)
+            .collect(Collectors.groupingBy(
+                TicketTypeRequest::getTicketType,
+                Collectors.summingInt(TicketTypeRequest::getNoOfTickets)
+            ));
         
-        int totalCost = costCalculator.calculate(ticketTypeRequests);
-        int totalSeats = seatCalculator.calculate(ticketTypeRequests);
+        validator.validate(accountId, ticketCounts);
+        
+        int totalCost = costCalculator.calculate(ticketCounts);
+        int totalSeats = seatCalculator.calculate(ticketCounts);
         
         logger.debug("Calculated cost: £{}, seats: {}", totalCost, totalSeats);
         

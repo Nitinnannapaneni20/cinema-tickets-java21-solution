@@ -3,17 +3,17 @@ package uk.gov.dwp.uc.pairtest.validation;
 import uk.gov.dwp.uc.pairtest.domain.TicketTypeRequest;
 import uk.gov.dwp.uc.pairtest.exception.InvalidPurchaseException;
 import uk.gov.dwp.uc.pairtest.exception.TicketPurchaseException;
-import java.util.Arrays;
+import java.util.Map;
 
 public class TicketValidatorImpl implements TicketValidator {
     
     private static final int MAX_TICKETS = 25;
     
     @Override
-    public void validate(Long accountId, TicketTypeRequest... requests) {
+    public void validate(Long accountId, Map<TicketTypeRequest.Type, Integer> ticketCounts) {
         ensureAccountIdIsValid(accountId);
-        ensureRequestsNotExceedingMaximumTickets(requests);
-        enforceAdultSupervisionBusinessRules(requests);
+        ensureRequestsNotExceedingMaximumTickets(ticketCounts);
+        enforceAdultSupervisionBusinessRules(ticketCounts);
     }
     
     private void ensureAccountIdIsValid(Long accountId) {
@@ -25,14 +25,13 @@ public class TicketValidatorImpl implements TicketValidator {
         }
     }
     
-    private void ensureRequestsNotExceedingMaximumTickets(TicketTypeRequest... requests) {
-        if (requests == null || requests.length == 0) {
+    private void ensureRequestsNotExceedingMaximumTickets(Map<TicketTypeRequest.Type, Integer> ticketCounts) {
+        if (ticketCounts == null || ticketCounts.isEmpty()) {
             throw new TicketPurchaseException("At least one ticket request is required");
         }
         
-        int totalTickets = Arrays.stream(requests)
-            .filter(request -> request != null && request.getNoOfTickets() > 0)
-            .mapToInt(TicketTypeRequest::getNoOfTickets)
+        int totalTickets = ticketCounts.values().stream()
+            .mapToInt(Integer::intValue)
             .sum();
             
         if (totalTickets <= 0) {
@@ -45,10 +44,10 @@ public class TicketValidatorImpl implements TicketValidator {
         }
     }
     
-    private void enforceAdultSupervisionBusinessRules(TicketTypeRequest... requests) {
-        int adults = calculateTotalTicketsByType(requests, TicketTypeRequest.Type.ADULT);
-        int children = calculateTotalTicketsByType(requests, TicketTypeRequest.Type.CHILD);
-        int infants = calculateTotalTicketsByType(requests, TicketTypeRequest.Type.INFANT);
+    private void enforceAdultSupervisionBusinessRules(Map<TicketTypeRequest.Type, Integer> ticketCounts) {
+        int adults = ticketCounts.getOrDefault(TicketTypeRequest.Type.ADULT, 0);
+        int children = ticketCounts.getOrDefault(TicketTypeRequest.Type.CHILD, 0);
+        int infants = ticketCounts.getOrDefault(TicketTypeRequest.Type.INFANT, 0);
         
         if (adults == 0 && (children > 0 || infants > 0)) {
             throw new TicketPurchaseException(
@@ -61,10 +60,5 @@ public class TicketValidatorImpl implements TicketValidator {
         }
     }
     
-    private int calculateTotalTicketsByType(TicketTypeRequest[] requests, TicketTypeRequest.Type type) {
-        return Arrays.stream(requests)
-            .filter(request -> request != null && request.getTicketType() == type)
-            .mapToInt(TicketTypeRequest::getNoOfTickets)
-            .sum();
-    }
+
 }
