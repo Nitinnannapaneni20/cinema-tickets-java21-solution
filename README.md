@@ -86,6 +86,13 @@ Key design decisions:
 - **Functional interfaces**: Modern Java approach with clean separation
 - **Comprehensive error handling**: Clear exception messages for all failure scenarios
 
+## SOLID Principles Applied
+
+- **Single Responsibility**: Each component has one clear purpose (TicketValidator for validation, CostCalculator for pricing)
+- **Open/Closed**: Functional interfaces allow extending behavior without modifying existing code
+- **Interface Segregation**: Small, focused interfaces (TicketValidator, CostCalculator, SeatCalculator)
+- **Dependency Inversion**: TicketServiceImpl depends on abstractions, not concrete implementations
+
 ## What I Tested
 
 **48 comprehensive test cases** covering:
