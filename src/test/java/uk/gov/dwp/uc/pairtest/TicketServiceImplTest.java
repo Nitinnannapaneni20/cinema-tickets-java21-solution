@@ -181,7 +181,7 @@ class TicketServiceImplTest {
         verify(paymentService).makePayment(1L, 50); // Only adults pay
     }
     
-    // Edge case - what about mixed scenarios?
+    // Edge case - mixed scenarios with multiple ticket types
     @Test
     void testComplexFamilyScenario() {
         // Large family: 3 adults, 2 children, 1 infant - realistic scenario
@@ -195,5 +195,25 @@ class TicketServiceImplTest {
         // Cost: 3*£25 + 2*£15 + 1*£0 = £105
         verify(seatService).reserveSeat(10L, 5);
         verify(paymentService).makePayment(10L, 105);
+    }
+    
+    // Edge case - 26 infants should fail (exceeds 25 ticket limit)
+    @Test
+    void testTwentySixInfantsFails() {
+        TicketTypeRequest adultRequest = new TicketTypeRequest(TicketTypeRequest.Type.ADULT, 26); // Need adults for infants
+        TicketTypeRequest infantRequest = new TicketTypeRequest(TicketTypeRequest.Type.INFANT, 26);
+        
+        assertThrows(InvalidPurchaseException.class, () -> 
+            ticketService.purchaseTickets(1L, adultRequest, infantRequest)); // 52 total tickets > 25 limit
+    }
+    
+    // Edge case - 26 children should fail (exceeds 25 ticket limit)
+    @Test
+    void testTwentySixChildrenFails() {
+        TicketTypeRequest adultRequest = new TicketTypeRequest(TicketTypeRequest.Type.ADULT, 1); // Need adult for children
+        TicketTypeRequest childRequest = new TicketTypeRequest(TicketTypeRequest.Type.CHILD, 26);
+        
+        assertThrows(InvalidPurchaseException.class, () -> 
+            ticketService.purchaseTickets(1L, adultRequest, childRequest)); // 27 total tickets > 25 limit
     }
 }
