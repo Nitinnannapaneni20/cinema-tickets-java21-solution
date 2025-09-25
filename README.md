@@ -1,108 +1,151 @@
 # Cinema Ticket Booking System
 
-This is an implementation of a cinema ticket booking system. It handles ticket purchases with validation, payment processing, and seat reservations.
+This is my implementation of a cinema ticket booking system for a coding challenge. It handles ticket purchases with proper validation, payment processing, and seat reservations using a clean modular architecture.
 
-## Ticket Rules
+## Business Rules
 
 - Adults cost £25, Children cost £15, Infants are free
-- You can buy max 25 tickets at once
-- Kids and babies need at least one adult with them
-- Babies sit on adult laps (no separate seat needed)
-- Only valid account IDs (greater than 0) can buy tickets
+- Maximum 25 tickets can be purchased at once
+- Children and infants must be accompanied by at least one adult
+- Infants sit on adult laps (no separate seat allocation)
+- Only valid account IDs (greater than 0) can purchase tickets
 
-## Setup Instructions
+## Prerequisites
 
-### Check if you have the right Java version
+You'll need Java 21 and Maven installed. Here's how to check:
+
 ```bash
-  java -version
-```
-You need Java 21. If you don't have it:
+# Check Java version (must be 21)
+java -version
 
-**On Ubuntu/Debian:**
-```bash
-  sudo apt update
-  sudo apt install openjdk-21-jdk
+# Check Maven is installed
+mvn -version
 ```
 
-**On macOS (with Homebrew):**
+If you don't have Java 21, download it from [Oracle](https://www.oracle.com/java/technologies/downloads/) or use [SDKMAN](https://sdkman.io/).
+
+## Getting Started
+
+### 1. Clone and Setup
 ```bash
-  brew install openjdk@21
+git clone <repository-url>
+cd cinema-tickets-java21-solution
 ```
 
-**On Windows:**
-Download from Oracle or use Chocolatey:
+### 2. Install Dependencies
 ```bash
-  choco install openjdk21
+mvn clean compile
 ```
 
-### Check if you have Maven
-```bash
-  mvn -version
-```
-If not installed:
+### 3. Run Tests
 
-**On Ubuntu/Debian:**
 ```bash
-  sudo apt install maven
-```
+# Run all tests (48 total: 30 unit + 18 integration)
+mvn test
 
-**On macOS:**
-```bash
-  brew install maven
-```
+# Run only unit tests
+mvn test -Dtest="*Test"
 
-**On Windows:**
-Download from Apache Maven website or:
-```bash
-  choco install maven
+# Run only integration tests
+mvn test -Dtest="*IntegrationTest"
+
+# Generate test coverage report
+mvn clean test jacoco:report
 ```
 
-#### Running the tests -   Clone the repo and navigate to it
+### 4. View Coverage Report
+After running `mvn clean test jacoco:report`, open:
+```
+target/site/jacoco/index.html
+```
+Currently achieving **95% code coverage**!
+
+### 5. Docker Support
+
 ```bash
-  cd cinema-tickets-java21-solution
+# Build Docker image
+docker build -t cinema-tickets .
+
+# Run tests in Docker
+docker run --rm cinema-tickets
 ```
 
-#### Run all tests
+### 6. SonarQube Analysis (Optional)
 ```bash
-  mvn clean test
+# Run SonarQube analysis (requires SonarQube server)
+mvn sonar:sonar -Dsonar.projectKey=cinema-tickets -Dsonar.host.url=http://localhost:9000
 ```
 
-## How I built it
+## How I Built It
 
-- All validation happens first before calling any external services
-- Seats get reserved before payment (makes more sense business-wise)
-- Used proper exception handling for invalid requests
-- Kept the external services as they were (couldn't modify them)
-- Added comprehensive tests covering real family scenarios
+I designed this with a modular architecture that separates concerns:
 
-## What I tested
+- **TicketServiceImpl**: Main orchestrator that coordinates validation, calculation, and external service calls
+- **TicketValidator**: Handles all business rule validation (account validity, ticket limits, adult supervision)
+- **CostCalculator**: Calculates total cost using a pricing map
+- **SeatCalculator**: Determines seat requirements (adults + children only)
 
-- 16 test cases covering different scenarios
-- Happy path: families buying tickets, adults only, boundary cases
-- Error cases: invalid accounts, business rule violations, edge cases
-- Real scenarios: large families, babies with parents, etc.
+Key design decisions:
+- **Single traversal optimization**: Process ticket requests once using Map<TicketType, Count> instead of multiple iterations
+- **Validation first**: All business rules checked before calling external services
+- **Seats before payment**: Reserve seats first, then charge (better user experience)
+- **Functional interfaces**: Modern Java approach with clean separation
+- **Comprehensive error handling**: Clear exception messages for all failure scenarios
 
-## Assumptions I made
+## What I Tested
 
-- All valid accounts have enough money
-- The payment and seat services always work
-- Babies can only sit on adult laps (1 baby per adult max)
-- It makes sense to reserve seats before charging money
+**48 comprehensive test cases** covering:
 
-## Project structure
+**Unit Tests (30 tests):**
+- TicketServiceImpl orchestration logic with mocked dependencies
+- TicketValidator business rule validation
+- CostCalculator pricing calculations
+- SeatCalculator seat requirements
 
-The main code is in `TicketServiceImpl.java` - that's where all the logic lives.
-Everything else was provided in the base project.
+**Integration Tests (18 tests):**
+- End-to-end scenarios with real component interactions
+- Family booking scenarios (parents with kids and babies)
+- Boundary conditions (exactly 25 tickets)
+- Error cases (invalid accounts, business rule violations)
+- Edge cases (large families, complex ticket combinations)
 
-Tests are in `TicketServiceImplTest.java` with realistic scenarios.
+## Project Structure
 
-## Tech used
+```
+src/main/java/uk/gov/dwp/uc/pairtest/
+├── TicketService.java              # Interface (unchanged)
+├── TicketServiceImpl.java          # Main service implementation
+├── calculation/
+│   ├── CostCalculator.java         # Pricing calculation interface
+│   ├── CostCalculatorImpl.java     # Pricing implementation
+│   ├── SeatCalculator.java         # Seat calculation interface
+│   └── SeatCalculatorImpl.java     # Seat implementation
+├── validation/
+│   ├── TicketValidator.java        # Validation interface
+│   └── TicketValidatorImpl.java    # Business rule validation
+├── domain/
+│   └── TicketTypeRequest.java      # Domain model (unchanged)
+└── exception/
+    ├── InvalidPurchaseException.java    # Base exception (unchanged)
+    └── TicketPurchaseException.java     # Detailed exception messages
+```
 
-- Java 21
-- JUnit 5 for testing
-- Mockito for mocking the external services
-- Maven for building
+## Tech Stack
+
+- **Java 21** with modern features (streams, functional interfaces, method references)
+- **JUnit 5** for testing framework
+- **Mockito** for mocking external dependencies
+- **JaCoCo** for code coverage reporting
+- **Maven** for build management
+- **Docker** for containerization
+- **SLF4J + Logback** for logging
+
+## Assumptions Made
+
+- All valid accounts have sufficient funds
+- External payment and seat reservation services are reliable
+- One infant per adult maximum (infants sit on laps)
+- Seat reservation happens before payment (better UX if payment fails)
+- Business rules are enforced strictly with clear error messages
 
 ---
-
-If you have any issues running this, check that Java 21 and Maven are properly installed and in your PATH.
